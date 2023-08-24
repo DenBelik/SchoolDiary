@@ -15,6 +15,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->tableWidget->setRowCount(8);
     ui->tableWidget->setColumnCount(4);
+
     ui->tableWidget->setColumnWidth(0, 200);
     ui->tableWidget->setColumnWidth(1, 400);
     ui->tableWidget->setColumnWidth(2, 100);
@@ -26,8 +27,7 @@ MainWindow::MainWindow(QWidget *parent)
     loadScheduleFromFile(scheduleFile, scheduleList);
     loadCommentListFromFile(commentsFile, commentList);
 
-    reloadTable(scheduleList, commentList, ui->dateEdit->date().dayOfWeek(), ui->dateEdit->date().toString());
-
+    reloadTable(scheduleList, commentList, ui->dateEdit->date().dayOfWeek(), ui->dateEdit->date().toString("dd.MM.yyyy"));
 }
 
 MainWindow::~MainWindow()
@@ -79,14 +79,13 @@ void MainWindow::loadScheduleFromFile(QFile &file, QVector<ScheduleList> &schedu
            list.lesson[6] = line.section(";", 7, 7);
            list.lesson[7] = line.section(";", 8, 8);
            if (day < 7) scheduleList.replace(day, list);
-
     }
     file.close();
 }
 
 void MainWindow::saveSchedule(QVector<ScheduleList> &list, int dayOfWeek) {
 
-    for (int i = 0; i < 7; i++) {
+    for (int i = 0; i <= 7; i++) {
 
         if (ui->tableWidget->item(i,0) != 0) {
             list[dayOfWeek].lesson[i] = ui->tableWidget->item(i, 0)->text();
@@ -116,37 +115,42 @@ void MainWindow::loadCommentListFromFile(QFile &file, QVector<MainWindow::Commen
     file.open(QIODevice::ReadWrite);
     while(!file.atEnd()) {
         QString line = file.readLine();
-        //qDebug() << line.section(";", 0, 0);
         emptyComment.date = line.section(";", 0, 0);
-        for (int i = 0; i < 7; i++) {
+        for (int i = 0; i <= 7; i++) {
             emptyComment.comment[i] = line.section(";", i+1, i+1);
         }
-        for (int i = 0; i < 7; i++) {
-            emptyComment.grade[i] = line.section(";", i+8, i+8);
+        for (int i = 0; i <= 7; i++) {
+            emptyComment.grade[i] = line.section(";", i+9, i+9);
         }
         commentList.push_back(emptyComment);
     }
     file.close();
 }
 
-void MainWindow::saveCommentList(QVector<MainWindow::Comment> &list, QString date)
+void MainWindow::saveCommentList(QVector<MainWindow::Comment> &commentList, QString date)
 {
+    bool commentFounded = false;
     Comment emptyComment;
     emptyComment.date = date;
-    for (int i = 0; i < 7; i++) {
+    for (int i = 0; i <= 7; i++) {
         if (ui->tableWidget->item(i, 1) != 0) emptyComment.comment[i] = ui->tableWidget->item(i, 1)->text();
         if (ui->tableWidget->item(i, 2) != 0) emptyComment.grade[i] = ui->tableWidget->item(i, 2)->text();
     }
-    if (!list.empty()) {
-        for (int i = 0; i < list.size(); i++) {
-            if (list[i].date == emptyComment.date) {
-                list.replace(i, emptyComment);
+    if (!commentList.empty()) {
+        for (int i = 0; i < commentList.size(); i++) {
+            if (commentList[i].date == emptyComment.date) {
+                commentList.replace(i, emptyComment);
+                commentFounded = true;
                 break;
             }
         }
-        list.push_back(emptyComment);
+
+        if (!commentFounded) {
+            commentList.push_back(emptyComment);
+        }
+
     } else {
-        list.push_back(emptyComment);
+        commentList.push_back(emptyComment);
     }
 }
 
@@ -155,10 +159,10 @@ void MainWindow::saveCommentListToFile(QFile &file, QVector<Comment> &commentLis
     QTextStream out(&file);
     for (int i = 0; i < commentList.size(); i++) {
         out << commentList[i].date << ";";
-        for (int j = 0; j < 7; j++) {
+        for (int j = 0; j <= 7; j++) {
             out << commentList[i].comment[j] << ";";
         }
-        for (int k = 0; k < 7; k++) {
+        for (int k = 0; k <= 7; k++) {
             out << commentList[i].grade[k] << ";";
         }
         out << "\n";
@@ -169,20 +173,16 @@ void MainWindow::saveCommentListToFile(QFile &file, QVector<Comment> &commentLis
 void MainWindow::reloadTable(QVector<MainWindow::ScheduleList> &list, QVector<Comment> &commentsList, int dayOfWeek, QString date)
 {
     ui->tableWidget->clear();
+    ui->tableWidget->setHorizontalHeaderLabels(QStringList() << "Урок" << "Д/З" << "Оценка" << "Подпись");
     if (ui->dateEdit->date().dayOfWeek() != 7) {
         if (dayOfWeek == ui->dateEdit->date().dayOfWeek()) {
-            for (int i = 0; i < 7; i++) {
+            for (int i = 0; i <= 7; i++) {
                 ui->tableWidget->setItem(i, 0, new QTableWidgetItem(list[dayOfWeek].lesson[i]));
             }
         }
         for (int j = 0; j < commentsList.size(); j++) {
-
-            qDebug() << commentsList[j].date << "\n";
-            if (commentsList[j].date == date) qDebug() << "true\n";
-            else qDebug() << "false\n";
-
             if (date == commentsList[j].date) {
-                for (int k = 0; k < 7; k++) {
+                for (int k = 0; k <= 7; k++) {
                     ui->tableWidget->setItem(k, 1, new QTableWidgetItem(commentsList[j].comment[k]));
                     ui->tableWidget->setItem(k, 2, new QTableWidgetItem(commentsList[j].grade[k]));
                 }
@@ -207,7 +207,6 @@ void MainWindow::on_SaveBtn_clicked()
 
 void MainWindow::on_dateEdit_userDateChanged(const QDate &date)
 {
-    qDebug() << ui->dateEdit->date().toString();
     reloadTable(scheduleList, commentList, ui->dateEdit->date().dayOfWeek(), ui->dateEdit->date().toString("dd.MM.yyyy"));
     setDayOfWeek(ui->dateEdit->date().dayOfWeek());
 }
